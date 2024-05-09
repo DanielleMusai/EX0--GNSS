@@ -1,5 +1,7 @@
 import csv
 
+# attempt to convert the log to CSV
+
 
 def parse_log_file(log_file):
     parsed_data = []
