@@ -1,4 +1,7 @@
 import sys, os, csv
+
+import simplekml
+
 parent_directory = os.path.split(os.getcwd())[0]
 ephemeris_data_directory = os.path.join(parent_directory, 'data')
 sys.path.insert(0, parent_directory)
@@ -12,7 +15,7 @@ from gnssutils import EphemerisManager
 
 # Data Aquisition
 # Get path to sample file in data directory, which is located in the parent directory of this notebook
-input_filepath = os.path.join(parent_directory, 'pythonProject1', 'gnss_log_2024_04_13_19_51_17.txt')
+input_filepath = os.path.join(parent_directory, 'GNSS', 'gnss_log_2024_04_13_19_51_17.txt')
 
 with open(input_filepath) as csvfile:
     reader = csv.reader(csvfile)
@@ -73,8 +76,6 @@ measurements['UnixTime'] = measurements['UnixTime']
 measurements['Epoch'] = 0
 measurements.loc[measurements['UnixTime'] - measurements['UnixTime'].shift() > timedelta(milliseconds=200), 'Epoch'] = 1
 measurements['Epoch'] = measurements['Epoch'].cumsum()
-
-# Pseudorange Calculation
 
 WEEKSEC = 604800
 LIGHTSPEED = 2.99792458e8
@@ -161,25 +162,35 @@ def calculate_satellite_position(ephemeris, transmit_time):
     Omega_k = ephemeris['Omega_0'] + (ephemeris['OmegaDot'] - OmegaDot_e) * sv_position['t_k'] - OmegaDot_e * ephemeris[
         't_oe']
 
-    sv_position['x_k'] = x_k_prime * np.cos(Omega_k) - y_k_prime * np.cos(i_k) * np.sin(Omega_k)
-    sv_position['y_k'] = x_k_prime * np.sin(Omega_k) + y_k_prime * np.cos(i_k) * np.cos(Omega_k)
-    sv_position['z_k'] = y_k_prime * np.sin(i_k)
+    sv_position['Sat_x'] = x_k_prime * np.cos(Omega_k) - y_k_prime * np.cos(i_k) * np.sin(Omega_k)
+    sv_position['Sat_y'] = x_k_prime * np.sin(Omega_k) + y_k_prime * np.cos(i_k) * np.cos(Omega_k)
+    sv_position['Sat_z'] = y_k_prime * np.sin(i_k)
     return sv_position
+
 
 
 # Run the function and check out the results:
 sv_position = calculate_satellite_position(ephemeris, one_epoch['tTxSeconds'])
 print(sv_position)
 
-# What Are Pseudoranges, Anyway?
-#initial guesses of receiver clock bias and position
-b0 = 0
-x0 = np.array([0, 0, 0])
-xs = sv_position[['x_k', 'y_k', 'z_k']].to_numpy()
+# Initial guesses of receiver clock bias and position
 
 # Apply satellite clock bias to correct the measured pseudorange values
 pr = one_epoch['PrM'] + LIGHTSPEED * sv_position['delT_sv']
 pr = pr.to_numpy()
+sv_position["Pr"] = pr
+
+# Include CN0 values
+sv_position['cn0'] = measurements['Cn0DbHz']
+
+# Remove the 'delT_sv' column
+sv_position = sv_position.drop('delT_sv', axis=1)
+
+# Store the results in a CSV file
+output_file = os.path.join(parent_directory, 'GNSS', 'output.csv')
+sv_position.to_csv(output_file)
+
+print("Results saved to:", output_file)
 
 # Least Squares Position Solution
 def least_squares(xs, measured_pseudorange, x0, b0):
@@ -207,10 +218,15 @@ def least_squares(xs, measured_pseudorange, x0, b0):
     norm_dp = np.linalg.norm(deltaP)
     return x0, b0, norm_dp
 
+b0 = 0
+x0 = np.array([0, 0, 0])
+xs = sv_position[['Sat_x', 'Sat_y', 'Sat_z']].to_numpy()
 x, b, dp = least_squares(xs, pr, x0, b0)
 print(navpy.ecef2lla(x))
 print(b/LIGHTSPEED)
 print(dp)
+
+
 
 ecef_list = []
 for epoch in measurements['Epoch'].unique():
@@ -222,7 +238,7 @@ for epoch in measurements['Epoch'].unique():
         ephemeris = manager.get_ephemeris(timestamp, sats)
         sv_position = calculate_satellite_position(ephemeris, one_epoch['tTxSeconds'])
 
-        xs = sv_position[['x_k', 'y_k', 'z_k']].to_numpy()
+        xs = sv_position[['Sat_x', 'Sat_y', 'Sat_z']].to_numpy()
         pr = one_epoch['PrM'] + LIGHTSPEED * sv_position['delT_sv']
         pr = pr.to_numpy()
 
@@ -231,24 +247,26 @@ for epoch in measurements['Epoch'].unique():
 
 # Results
 # Perform coordinate transformations using the Navpy library
+# List to hold Latitude, Longitude, and Altitude (LLA) coordinates
+lla_coordinates = [navpy.ecef2lla(coord) for coord in ecef_list]
 
-ecef_array = np.stack(ecef_list, axis=0)
-lla_array = np.stack(navpy.ecef2lla(ecef_array), axis=1)
 
-# Extract the first position as a reference for the NED transformation
-ref_lla = lla_array[0, :]
-ned_array = navpy.ecef2ned(ecef_array, ref_lla[0], ref_lla[1], ref_lla[2])
+def create_kml_file(coords, output_file):
+    kml = simplekml.Kml()
+    for coord in coords:
+        lat, lon, alt = coord
+        kml.newpoint(name="", coords=[(lon, lat, alt)])
+    kml.save(output_file)
 
-# Convert back to Pandas and save to csv
-lla_df = pd.DataFrame(lla_array, columns=['Latitude', 'Longitude', 'Altitude'])
-ned_df = pd.DataFrame(ned_array, columns=['N', 'E', 'D'])
-lla_df.to_csv('calculated_postion.csv')
-android_fixes.to_csv('android_position.csv')
 
-# Plot
-plt.style.use('dark_background')
-plt.plot(ned_df['E'], ned_df['N'])
-plt.title('Position Offset from First Epoch')
-plt.xlabel("East (m)")
-plt.ylabel("North (m)")
-plt.gca().set_aspect('equal', adjustable='box')
+# Output file path
+output_file = "coordinates1.kml"
+
+# Create KML file
+create_kml_file(lla_coordinates, output_file)
+
+with open('lla_coordinates1.csv', 'w', newline='') as csvfile:
+    writer = csv.writer(csvfile)
+    writer.writerow(['Pos.X', 'Pos.Y', 'Pos.Z', 'Lat', 'Lon', 'Alt'])
+    for ecef_coord, lla_coord in zip(ecef_list, lla_coordinates):
+        writer.writerow([e for e in ecef_coord] + [lla_coord[0], lla_coord[1], lla_coord[2]])
