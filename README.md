@@ -12,6 +12,7 @@ there may be more libraries that will need to be downloaded however for simplekm
 3 add all the files to you new project    
 4 keep in mind some adjustments may be needed with regards to file path for both reading and writing (code lines 11-15)   
 5 from the data folder choose the data log you wish to read and update code line 15 
+6 the folder gnssutils in an important folder that is taken from the original source code (very important !)
 
 ### source code and information
 The code i based on the following notebook you may want to read it to get a better understanding and explanations of the code      
