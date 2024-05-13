@@ -1,24 +1,25 @@
-# Ex0 - GNSS Raw Mesurments
+# Ex0 - GNSS Raw Measurements
+The following project is a solution for the assignment in the next link:
+[assignment 0](https://docs.google.com/document/d/1DDLrA2BoJ4RKa4ahbm2prtseBdgM-2C9UbHO-JwSasw/edit)
 
-The following project is a solution for the assinment in the next link https://docs.google.com/document/d/1DDLrA2BoJ4RKa4ahbm2prtseBdgM-2C9UbHO-JwSasw/edit
 
-### requirements
-simplekml==1.3.6   
-there may be more libraries that will need to be downloaded however for simplekml a specific version is needed
+### Requirements
+simplekml==1.3.6
+There may be more libraries that will need to be downloaded. However, for simplekml, a specific version is needed.
 
 ### How To Run
-1 download the files   
-2 create a python environment project   
-3 add all the files to you new project    
-4 keep in mind some adjustments may be needed with regards to file path for both reading and writing (code lines 11-15)   
-5 from the data folder choose the data log you wish to read and update code line 15 
-6 the folder gnssutils in an important folder that is taken from the original source code (very important !)
+1 Download the files   
+2 Create a Python environment project   
+3 Add all the files to your new project   
+4 Keep in mind some adjustments may be needed with regards to file path for both reading and writing (code lines 11-15)    
+5 From the data folder, choose the data log you wish to read and update code line 15   
+6 The folder gnssutils is an important folder that is taken from the original source code (very important !)   
 
-### source code and information
-The code i based on the following notebook you may want to read it to get a better understanding and explanations of the code      
-https://www.johnsonmitchelld.com/2021/03/14/least-squares-gps.html
+### Source Code and Information
+The code is based on the following notebook. You may want to read it to get a better understanding and explanations of the code:   
+[Calculating Your Android's Position from Raw GNSS Pseudorange Measurements](https://www.johnsonmitchelld.com/2021/03/14/least-squares-gps.html)   
 
-## code breack down
+### Code Breakdown
 This Python script aims to analyze Global Navigation Satellite System (GNSS) data, calculate satellite positions, perform least squares position solutions, and visualize the results. Let's break down the key components:
 
 1. Data Acquisition and Pre-processing   
@@ -38,4 +39,4 @@ Key results are saved in CSV files for further analysis or visualization.
 5. Output Generation   
 The script generates various outputs, including CSV files containing satellite positions, combined results, and a KML file for visualization in Google Earth.   
 6. Main Function   
-The main() function orchestrates the entire process, calling different functions to perform specific tasks sequentially.   
+The main() function orchestrates the entire process, calling different functions to perform specific tasks sequentially.
