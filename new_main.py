@@ -7,6 +7,8 @@ import matplotlib.pyplot as plt
 import navpy
 from gnssutils import EphemerisManager
 
+pd.options.mode.chained_assignment = None  # Suppress SettingWithCopyWarning
+
 parent_directory = os.path.split(os.getcwd())[0]
 data_directory = os.path.join(parent_directory, 'data')
 sys.path.insert(0, parent_directory)
@@ -113,11 +115,11 @@ def least_squares(xs, measured_pseudorange, x0, b0):
     return x0, b0, norm_dp
 
 # this is the same needs update
-def create_kml_file(coords):
+def kml(coordinates):
     file_name = os.path.join(parent_directory, 'output' ,"KML.kml")
     kml = simplekml.Kml()
-    for coord in coords:
-        lat, lon, alt = coord
+    for coordinate in coordinates:
+        lat, lon, alt = coordinate
         kml.newpoint(name="", coords=[(lon, lat, alt)])
     kml.save(file_name)
 
@@ -251,18 +253,20 @@ def qustion3(measurements):
 
 # this needs name update
 def qustion5(ecef_list, lat_lon_alt):
+    kml(lat_lon_alt)
+
     file_path = os.path.join(parent_directory, 'output', 'lla_coordinates.csv')
     with open(file_path, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(['Pos.X', 'Pos.Y', 'Pos.Z', 'Lat', 'Lon', 'Alt'])
+        csv_writer = csv.writer(csvfile)
+        csv_writer.writerow(['Pos.X', 'Pos.Y', 'Pos.Z', 'Lat', 'Lon', 'Alt'])
         for ecef_coord, lla_coord in zip(ecef_list, lat_lon_alt):
-            writer.writerow([e for e in ecef_coord] + [lla_coord[0], lla_coord[1], lla_coord[2]])
+            row = list(ecef_coord) + [lla_coord[0], lla_coord[1], lla_coord[2]]
+            csv_writer.writerow(row)
 
 def main():
     measurements, sv_position = qustion2()
     ecef_list = qustion3(measurements)
     lat_lon_alt = [navpy.ecef2lla(coord) for coord in ecef_list]
-    create_kml_file(lat_lon_alt)
     qustion5(ecef_list, lat_lon_alt)
     print("end")
 
