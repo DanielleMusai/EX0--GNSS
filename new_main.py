@@ -82,6 +82,8 @@ def final_sat_pos(ephemeris, transmit_time , one_epoch):
 
     # Include CN0 values
     sv_position['cn0'] = one_epoch['Cn0DbHz']
+
+    # dopler here
     return sv_position
 
 # Least Squares Position Solution
@@ -110,8 +112,9 @@ def least_squares(xs, measured_pseudorange, x0, b0):
     norm_dp = np.linalg.norm(deltaP)
     return x0, b0, norm_dp
 
+# this is the same needs update
 def create_kml_file(coords):
-    file_name = "KML.kml"
+    file_name = os.path.join(parent_directory, 'output' ,"KML.kml")
     kml = simplekml.Kml()
     for coord in coords:
         lat, lon, alt = coord
@@ -221,8 +224,7 @@ def qustion2():
     # Remove the 'delT_sv' column
     sv_position = sv_position.drop('delT_sv', axis=1)
 
-    sv_position.to_csv(os.path.join(parent_directory, 'pythonProject1', 'first_output.csv'))
-
+    sv_position.to_csv(os.path.join(parent_directory, 'output', 'first_output.csv'))
     return measurements, sv_position
 
 def qustion3(measurements):
@@ -247,8 +249,10 @@ def qustion3(measurements):
             ecef_list.append(x)
     return ecef_list
 
+# this needs name update
 def qustion5(ecef_list, lat_lon_alt):
-    with open('lla_coordinates.csv', 'w', newline='') as csvfile:
+    file_path = os.path.join(parent_directory, 'output', 'lla_coordinates.csv')
+    with open(file_path, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(['Pos.X', 'Pos.Y', 'Pos.Z', 'Lat', 'Lon', 'Alt'])
         for ecef_coord, lla_coord in zip(ecef_list, lat_lon_alt):
