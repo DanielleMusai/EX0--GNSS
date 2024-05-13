@@ -7,11 +7,13 @@ import navpy
 from gnssutils import EphemerisManager
 pd.options.mode.chained_assignment = None  # Suppress SettingWithCopyWarning
 
+# files path (adjust as needed) !!!!
 parent_directory = os.path.split(os.getcwd())[0]
 data_directory = os.path.join(parent_directory,'pythonProject1', 'data')
 output_directory = os.path.join(parent_directory,'pythonProject1', 'output')
 sys.path.insert(0, parent_directory)
-data_log_name = 'gnss_log_2024_04_13_19_51_17.txt'
+data_log_name = 'gnss_log_2024_05_13_23_35_14_mylog.txt'
+# data_log_name = 'gnss_log_2024_04_13_19_51_17.txt'
 
 # Consents
 WEEKSEC = 604800
@@ -273,13 +275,17 @@ def kml(coordinates):
     kml.save(file_name)
 
 def main():
+    # qustion 2
     measurements, sv_position = qustion2()
+
+    # qustion 3
     ecef_list = qustion3(measurements)
 
     # qustion 4
     lat_lon_alt = [navpy.ecef2lla(coord) for coord in ecef_list]
 
     # qustion 5
+    qustion5(ecef_list, lat_lon_alt)
     df1 = pd.read_csv(os.path.join(output_directory, 'output_q2.csv'))
     df2 = pd.read_csv(os.path.join(output_directory, 'lat_lon_alt_output.csv'))
 
@@ -287,8 +293,6 @@ def main():
     combined_df = pd.concat([df1, df2], ignore_index=True)
     # Write the combined dataframe to a new CSV file
     combined_df.to_csv(os.path.join(output_directory,'combined_q2_lla.csv'), index=False)
-
-    qustion5(ecef_list, lat_lon_alt)
     print("end")
 
 if __name__ == "__main__":
