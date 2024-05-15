@@ -9,11 +9,12 @@ pd.options.mode.chained_assignment = None  # Suppress SettingWithCopyWarning
 
 # files path (adjust as needed) !!!!
 parent_directory = os.path.split(os.getcwd())[0]
-data_directory = os.path.join(parent_directory,'pythonProject1', 'data')
+data_directory = os.path.join(parent_directory,'pythonProject1', 'data') # change to you project name ass needed !!
 output_directory = os.path.join(parent_directory,'pythonProject1', 'output')
+test_directory = os.path.join(parent_directory,'pythonProject1', 'testfiles')# change to you project name ass needed !!
 sys.path.insert(0, parent_directory)
-data_log_name = 'gnss_log_2024_05_13_23_35_14_mylog.txt'
-# data_log_name = 'gnss_log_2024_04_13_19_51_17.txt'
+# data_log_name = 'gnss_log_2024_05_13_23_35_14_mylog.txt'
+data_log_name = 'gnss_log_2024_04_13_19_51_17.txt'
 
 # Consents
 WEEKSEC = 604800
@@ -213,32 +214,32 @@ def qustion2():
 
     # Retrieving Ephemeris Data
     epoch = 0
-    num_sats = 0
-    while num_sats < 5 :
+    all_sv_positions = pd.DataFrame()
+    while epoch != measurements['Epoch'].max()+1:
         one_epoch = measurements.loc[(measurements['Epoch'] == epoch) & (measurements['prSeconds'] < 0.1)].drop_duplicates(subset='SvName')
-        timestamp = one_epoch.iloc[0]['UnixTime'].to_pydatetime(warn=False)
-        one_epoch.set_index('SvName', inplace=True)
         num_sats = len(one_epoch.index)
+
+        if num_sats >= 5:
+            timestamp = one_epoch.iloc[0]['UnixTime'].to_pydatetime(warn=False)
+            one_epoch.set_index('SvName', inplace=True)
+            sats = one_epoch.index.unique().tolist()
+            ephemeris = manager.get_ephemeris(timestamp, sats)
+            sv_position = final_sat_pos(ephemeris,one_epoch['tTxSeconds'],one_epoch)
+
+            all_sv_positions = pd.concat([all_sv_positions, sv_position])
         epoch += 1
 
-    sats = one_epoch.index.unique().tolist()
-    ephemeris = manager.get_ephemeris(timestamp, sats)
-    sv_position = final_sat_pos(ephemeris,one_epoch['tTxSeconds'],one_epoch)
-
-    sv_position = sv_position.reset_index()
-    sv_position = sv_position.drop('SvName', axis=1)
     # Remove the 'delT_sv' column
-    sv_position = sv_position.drop('delT_sv', axis=1)
-
-
-    sv_position.to_csv(os.path.join(output_directory, 'output_q2.csv'),index=False)
-    return measurements, sv_position
+    all_sv_positions = all_sv_positions.drop('delT_sv', axis=1)
+    all_sv_positions.to_csv(os.path.join(output_directory, 'OutPut_Q2.csv'),index=False)
+    return measurements, all_sv_positions
 
 def qustion3(measurements):
     b0 = 0
     x0 = np.array([0, 0, 0])
 
-    ecef_list = []
+    # ecef_list = []
+    ecef_list_time = []
     for epoch in measurements['Epoch'].unique():
         one_epoch = measurements.loc[(measurements['Epoch'] == epoch) & (measurements['prSeconds'] < 0.1)]
         one_epoch = one_epoch.drop_duplicates(subset='SvName').set_index('SvName')
@@ -253,19 +254,39 @@ def qustion3(measurements):
             pr = pr.to_numpy()
 
             x, b, dp = least_squares(xs, pr, x0, b0)
-            ecef_list.append(x)
-    return ecef_list
+            # ecef_list.append(x)
+            ecef_list_time.append((x,sv_position['GPS time'].min()))
 
-def qustion5(ecef_list, lat_lon_alt):
+    return ecef_list_time
+
+def qustion5(ecef_list, lat_lon_alt, q2_output):
     kml(lat_lon_alt)
-    file_path = os.path.join(output_directory, 'lat_lon_alt_output.csv')
+
+    file_path = os.path.join(output_directory, 'combined.csv')
     with open(file_path, 'w', newline='') as csvfile:
         csv_writer = csv.writer(csvfile)
-        csv_writer.writerow(['Pos.X', 'Pos.Y', 'Pos.Z', 'Lat', 'Lon', 'Alt'])
-        for ecef_coord, lla_coord in zip(ecef_list, lat_lon_alt):
-            row = list(ecef_coord) + [lla_coord[0], lla_coord[1], lla_coord[2]]
-            csv_writer.writerow(row)
+        csv_writer.writerow(['GPS time','SatPRN','Sat_x','Sat_y','Sat_z','Pr','cn0','DopplerShiftHz','Pos.X', 'Pos.Y', 'Pos.Z', 'Lat', 'Lon', 'Alt'])
 
+        for index, row in q2_output.iterrows():
+            GPS_time = row['GPS time']
+            SatPRN = row['SatPRN'] if 'SatPRN' in row else ''
+            Sat_x = row['Sat_x'] if 'Sat_x' in row else ''
+            Sat_y = row['Sat_y'] if 'Sat_y' in row else ''
+            Sat_z = row['Sat_z'] if 'Sat_z' in row else ''
+            Pr = row['Pr'] if 'Pr' in row else ''
+            cn0 = row['cn0'] if 'cn0' in row else ''
+            DopplerShiftHz = row['DopplerShiftHz'] if 'DopplerShiftHz' in row else ''
+
+            found = False
+            for (coord, time) in ecef_list:
+                if GPS_time == time:
+                    lla = navpy.ecef2lla(coord)
+                    csv_writer.writerow([GPS_time, SatPRN, Sat_x, Sat_y, Sat_z, Pr, cn0, DopplerShiftHz, coord[0], coord[1], coord[2], lla[0], lla[1], lla[2]])
+                    found = True
+                    break
+            if not found:
+                lla = navpy.ecef2lla(coord)
+                csv_writer.writerow([GPS_time, SatPRN, Sat_x, Sat_y, Sat_z, Pr, cn0, DopplerShiftHz, '', '', '', '', '', ''])
 def kml(coordinates):
     file_name = os.path.join(output_directory ,"KML.kml")
     kml = simplekml.Kml()
@@ -273,26 +294,40 @@ def kml(coordinates):
         lat, lon, alt = coordinate
         kml.newpoint(name="", coords=[(lon, lat, alt)])
     kml.save(file_name)
+def delete_files_in_folder(folder_path):
+    """
+    Deletes all files in the specified folder.
+
+    Args:
+    - folder_path (str): The path to the folder containing the files to be deleted.
+    """
+    try:
+        # List all files in the folder
+        files = os.listdir(folder_path)
+        # Iterate over each file and delete it
+        for file in files:
+            file_path = os.path.join(folder_path, file)
+            if os.path.isfile(file_path):  # Check if it's a file
+                os.remove(file_path)
+        print("All files deleted successfully from:", folder_path)
+    except Exception as e:
+        print("An error occurred:", str(e))
 
 def main():
+    # deleat previos out put files
+    delete_files_in_folder(output_directory)
+
     # qustion 2
     measurements, sv_position = qustion2()
 
     # qustion 3
-    ecef_list = qustion3(measurements)
+    ecef_list = qustion3(measurements) #my location in x y z coords
 
     # qustion 4
-    lat_lon_alt = [navpy.ecef2lla(coord) for coord in ecef_list]
+    lat_lon_alt = [navpy.ecef2lla(coord) for (coord, time) in ecef_list] # my location in LLA for the KML file !
 
     # qustion 5
-    qustion5(ecef_list, lat_lon_alt)
-    df1 = pd.read_csv(os.path.join(output_directory, 'output_q2.csv'))
-    df2 = pd.read_csv(os.path.join(output_directory, 'lat_lon_alt_output.csv'))
-
-    # Combine the dataframes
-    combined_df = pd.concat([df1, df2], ignore_index=True)
-    # Write the combined dataframe to a new CSV file
-    combined_df.to_csv(os.path.join(output_directory,'combined_q2_lla.csv'), index=False)
+    qustion5(ecef_list, lat_lon_alt,sv_position)
     print("end")
 
 if __name__ == "__main__":
