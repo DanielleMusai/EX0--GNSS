@@ -206,6 +206,11 @@ def pre_provessing(measurements):
     measurements['PrSigmaM'] = LIGHTSPEED * 1e-9 * measurements['ReceivedSvTimeUncertaintyNanos']
     return measurements
 
+# Reads GNSS measurements data, analyzes and formats it, and retrieves ephemeris data.
+#
+# Returns:
+# - DataFrame: Preprocessed GNSS measurements data.
+# - DataFrame: Satellite positions data.
 def qustion2():
     measurements, android_fixes = read_data()
     measurements = analyse_data(measurements)
@@ -233,6 +238,13 @@ def qustion2():
     all_sv_positions.to_csv(os.path.join(output_directory, 'OutPut_Q2.csv'),index=False)
     return measurements, all_sv_positions
 
+# Calculates the location of the receiver using satellite measurements.
+#
+# Args:
+# - measurements (DataFrame): Preprocessed GNSS measurements data.
+#
+# Returns:
+# - list: List of tuples containing receiver locations and corresponding GPS times.
 def qustion3(measurements):
     b0 = 0
     x0 = np.array([0, 0, 0])
@@ -257,6 +269,13 @@ def qustion3(measurements):
             ecef_list_time.append((x,sv_position['GPS time'].min()))
 
     return ecef_list_time
+
+#  Generates a KML file with points and writes satellite data to a CSV file.
+#
+# Args:
+# - ecef_list (list of tuples): List of tuples containing ECEF coordinates and GPS times.
+# - lat_lon_alt (list of tuples): List of tuples containing latitude, longitude, and altitude.
+# - q2_output (DataFrame): DataFrame containing satellite data.
 
 def qustion5(ecef_list, lat_lon_alt, q2_output):
     kml(lat_lon_alt)
@@ -322,6 +341,7 @@ def main():
     # qustion 3
     ecef_list = qustion3(measurements) #my location in x y z coords
 
+    # this is a given function that converting method from X,Y,Z to Lat, Lon, Alt
     # qustion 4
     lat_lon_alt = [navpy.ecef2lla(coord) for (coord, time) in ecef_list] # my location in LLA for the KML file !
 
