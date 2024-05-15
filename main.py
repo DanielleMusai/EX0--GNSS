@@ -10,11 +10,10 @@ pd.options.mode.chained_assignment = None  # Suppress SettingWithCopyWarning
 # files path (adjust as needed) !!!!
 parent_directory = os.path.split(os.getcwd())[0]
 data_directory = os.path.join(parent_directory,'pythonProject1', 'data') # change to you project name ass needed !!
-output_directory = os.path.join(parent_directory,'pythonProject1', 'output')
-test_directory = os.path.join(parent_directory,'pythonProject1', 'testfiles')# change to you project name ass needed !!
+output_directory = os.path.join(parent_directory,'pythonProject1', 'output')# change to you project name ass needed !!
 sys.path.insert(0, parent_directory)
-# data_log_name = 'gnss_log_2024_05_13_23_35_14_mylog.txt'
-data_log_name = 'gnss_log_2024_04_13_19_51_17.txt'
+data_log_name = 'gnss_log_2024_05_13_23_35_14_mylog.txt'
+# data_log_name = 'gnss_log_2024_04_13_19_51_17.txt'
 
 # Consents
 WEEKSEC = 604800
